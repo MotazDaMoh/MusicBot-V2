@@ -38,7 +38,9 @@ export const chatInput: ChatInputCommand = async ({ interaction, client }) => {
     return;
   }
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await interaction.deferReply({
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+  });
 
   try {
     if (!player.connected) await player.connect();

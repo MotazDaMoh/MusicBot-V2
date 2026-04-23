@@ -11,6 +11,8 @@ import type {
   UnresolvedTrack,
 } from 'lavalink-client';
 
+import { createLavalinkManager } from './lavalink.js';
+
 /**
  * Lightweight helpers that hide the verbose Lavalink client/player shape from
  * command handlers. All command files use these so swapping player libraries
@@ -22,9 +24,12 @@ import type {
  * `actions` slots), so an augmentation applied to one variant fails to flow
  * through the other and every call site ends up with a type error.
  *
- * Instead, every caller goes through {@link getManager} which retrieves the
- * Lavalink manager stashed on the client in `src/app.ts`. This keeps the
- * public API minimal and works regardless of which resolution mode TS picks.
+ * Instead, every caller goes through {@link getManager} which lazily
+ * constructs the Lavalink manager on first use and stashes it on the client.
+ * Relying on a module-load side-effect from `src/app.ts` is fragile because
+ * CommandKit v1's bundler can evaluate the entry module in a separate
+ * graph from the event/command handlers, so the manager ends up attached to
+ * a different Client instance than the one CommandKit drives.
  */
 
 const MANAGER_KEY = '__musicbotLavalink' as const;
@@ -35,12 +40,10 @@ export function attachManager(client: Client, manager: LavalinkManager): void {
 }
 
 export function getManager(client: Client): LavalinkManager {
-  const manager = (client as unknown as ClientWithManager)[MANAGER_KEY];
-  if (!manager) {
-    throw new Error(
-      'Lavalink manager is not attached to the client. Did src/app.ts run?',
-    );
-  }
+  const existing = (client as unknown as ClientWithManager)[MANAGER_KEY];
+  if (existing) return existing;
+  const manager = createLavalinkManager(client);
+  attachManager(client, manager);
   return manager;
 }
 
