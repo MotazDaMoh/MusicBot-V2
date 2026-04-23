@@ -35,11 +35,24 @@ import { createLavalinkManager } from './lavalink.js';
 const MANAGER_KEY = '__musicbotLavalink' as const;
 type ClientWithManager = { readonly [MANAGER_KEY]?: LavalinkManager };
 
+function assertClient(value: unknown): asserts value is Client {
+  if (typeof value !== 'object' || value === null) {
+    throw new TypeError(
+      `Expected a discord.js Client, received ${typeof value} (${String(value)}). ` +
+        'This usually means an event handler is missing a positional argument — ' +
+        "e.g. discord.js emits `raw` with `(packet, shardId)` so the handler " +
+        "signature must be `(packet, shardId, client)`.",
+    );
+  }
+}
+
 export function attachManager(client: Client, manager: LavalinkManager): void {
+  assertClient(client);
   (client as unknown as { [MANAGER_KEY]: LavalinkManager })[MANAGER_KEY] = manager;
 }
 
 export function getManager(client: Client): LavalinkManager {
+  assertClient(client);
   const existing = (client as unknown as ClientWithManager)[MANAGER_KEY];
   if (existing) return existing;
   const manager = createLavalinkManager(client);
